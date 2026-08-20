@@ -36,6 +36,19 @@ npm start
 
 Open [http://localhost:8787](http://localhost:8787).
 
+The app is a full product, not a single canvas:
+
+- `/` Home
+- `/world` Live map workspace
+- `/agents` Society directory and `/agents/:id` profiles, life logs, relationships
+- `/places` and `/places/:id`
+- `/relics` and `/relics/:id` (list, transfer, buy)
+- `/quests` board
+- `/chronicle` `/market` `/rankings`
+- `/mint` multi-step awakening
+- `/dashboard` holdings and claims
+- `/how-it-works` `/ownership` `/economy` `/status` `/settings`
+
 - Without `XAI_API_KEY` the world still runs on a strong heuristic loop (demo-safe).
 - With `XAI_API_KEY` (xAI / SpaceXAI, model `grok-4.5`) agents invent dialogue, quests, and new relics.
 

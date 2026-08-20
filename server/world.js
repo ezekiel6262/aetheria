@@ -49,6 +49,7 @@ export function createWorld() {
     onchainId: null,
     txHash: null,
     guidance: seed.goals[0],
+    guidanceHistory: [{ at: now() - 86_400_000, guidance: seed.goals[0] }],
   }));
 
   const relics = SEED_RELICS.map((seed, index) => {
@@ -61,6 +62,8 @@ export function createWorld() {
       mintedAt: now() - 43_200_000,
       onchainId: null,
       txHash: null,
+      listed: null,
+      history: [{ at: now() - 43_200_000, kind: "created", owner: creator?.owner ?? WORLD_TREASURY }],
     };
   });
 
@@ -125,7 +128,8 @@ export function getPublicState(world) {
     quests: QUESTS,
     agents: world.agents,
     relics: world.relics,
-    feed: world.feed.slice(-80).reverse(),
+    feed: world.feed.slice(-200).reverse(),
+    roles: Object.keys(ROLES),
     stats: {
       ...world.stats,
       agents: world.agents.length,
@@ -168,7 +172,9 @@ export function mintAgent(world, input = {}) {
     onchainId: input.onchainId || null,
     txHash: input.txHash || null,
     guidance: input.guidance || input.goals?.[0] || "Live, play, create.",
+    guidanceHistory: [],
   };
+  if (agent.guidance) agent.guidanceHistory.push({ at: now(), guidance: agent.guidance });
   world.agents.push(agent);
   const event = appendFeed(world, {
     kind: "mint",
@@ -185,6 +191,9 @@ export function guideAgent(world, agentId, guidance) {
   const agent = world.agents.find((entry) => entry.id === Number(agentId));
   if (!agent) throw new Error("Unknown agent");
   agent.guidance = String(guidance).slice(0, 280);
+  agent.guidanceHistory = agent.guidanceHistory || [];
+  agent.guidanceHistory.push({ at: now(), guidance: agent.guidance });
+  if (agent.guidanceHistory.length > 20) agent.guidanceHistory.shift();
   const event = appendFeed(world, {
     kind: "guide",
     actor: agent.name,
@@ -338,6 +347,8 @@ export function applyAction(world, agent, decision, extras = {}) {
       mintedAt: now(),
       onchainId: extras.relicOnchainId || null,
       txHash: extras.relicTxHash || extras.txHash || null,
+      listed: null,
+      history: [{ at: now(), kind: "created", owner: agent.owner }],
     };
     world.relics.push(relic);
     agent.inventory.push(relic.id);
@@ -366,6 +377,84 @@ export function applyAction(world, agent, decision, extras = {}) {
   });
 
   return { event, relic, agent };
+}
+
+export function transferRelic(world, relicId, to, from) {
+  const relic = world.relics.find((entry) => entry.id === Number(relicId));
+  if (!relic) throw new Error("Unknown relic");
+  if (from && relic.owner.toLowerCase() !== from.toLowerCase() && relic.owner !== WORLD_TREASURY) {
+    throw new Error("Not the owner");
+  }
+  const previous = relic.owner;
+  relic.owner = to;
+  relic.listed = null;
+  relic.history = relic.history || [];
+  relic.history.push({ at: now(), kind: "transfer", owner: to, from: previous });
+  const event = appendFeed(world, {
+    kind: "transfer",
+    actor: "owner",
+    relicId: relic.id,
+    detail: `${relic.name} passed from ${previous.slice(0, 8)}… to ${to.slice(0, 8)}…`,
+    owner: to,
+  });
+  return { relic, event };
+}
+
+export function listRelic(world, relicId, price, owner) {
+  const relic = world.relics.find((entry) => entry.id === Number(relicId));
+  if (!relic) throw new Error("Unknown relic");
+  if (owner && relic.owner.toLowerCase() !== owner.toLowerCase()) throw new Error("Not the owner");
+  relic.listed = { price: Number(price) || 1, at: now() };
+  relic.history = relic.history || [];
+  relic.history.push({ at: now(), kind: "listed", owner: relic.owner, price: relic.listed.price });
+  const event = appendFeed(world, {
+    kind: "list",
+    actor: relic.creator,
+    relicId: relic.id,
+    detail: `${relic.name} was listed for ${relic.listed.price} aether.`,
+    amount: relic.listed.price,
+  });
+  return { relic, event };
+}
+
+export function buyRelic(world, relicId, buyer) {
+  const relic = world.relics.find((entry) => entry.id === Number(relicId));
+  if (!relic) throw new Error("Unknown relic");
+  if (!relic.listed) throw new Error("Not listed");
+  if (!buyer) throw new Error("Connect a wallet to buy");
+  const price = relic.listed.price;
+  const seller = relic.owner;
+  relic.owner = buyer;
+  relic.listed = null;
+  relic.history = relic.history || [];
+  relic.history.push({ at: now(), kind: "sold", owner: buyer, from: seller, price });
+  const event = appendFeed(world, {
+    kind: "trade",
+    actor: "market",
+    relicId: relic.id,
+    detail: `${relic.name} sold for ${price} aether.`,
+    amount: price,
+    owner: buyer,
+  });
+  return { relic, event, price };
+}
+
+export function claimAll(world, owner) {
+  if (!owner) throw new Error("Connect a wallet to claim");
+  const mine = world.agents.filter((agent) => agent.owner.toLowerCase() === owner.toLowerCase());
+  const events = [];
+  let total = 0;
+  for (const agent of mine) {
+    try {
+      const result = claimRewards(world, agent.id, owner);
+      total += result.amount;
+      events.push(result.event);
+    } catch {
+      // nothing claimable on this agent
+    }
+  }
+  if (!total) throw new Error("Nothing to claim yet");
+  return { total, events };
 }
 
 export function pickActors(world, count = 1) {

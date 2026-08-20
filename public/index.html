@@ -13,71 +13,57 @@
   </head>
   <body>
     <div class="grain"></div>
-    <header class="top">
-      <div class="brand">
-        <img src="/assets/logo.jpg" alt="Aetheria" />
+    <header class="chrome">
+      <a class="brand" href="/" data-nav>
+        <img src="/assets/logo.jpg" alt="" />
         <div>
           <strong>Aetheria</strong>
-          <span>Living world · X Layer</span>
+          <span id="chrome-live">living</span>
         </div>
-      </div>
-      <div class="stats" id="stats"></div>
-      <div class="top-actions">
-        <span class="pill" id="chain-pill">local settlement</span>
-        <button id="connect" type="button">Connect wallet</button>
+      </a>
+      <nav class="chrome-nav">
+        <a href="/world" data-nav>World</a>
+        <a href="/agents" data-nav>Society</a>
+        <a href="/places" data-nav>Places</a>
+        <a href="/relics" data-nav>Relics</a>
+        <a href="/quests" data-nav>Quests</a>
+        <a href="/chronicle" data-nav>Chronicle</a>
+        <a href="/market" data-nav>Market</a>
+        <a href="/rankings" data-nav>Rankings</a>
+      </nav>
+      <div class="chrome-actions">
+        <span id="chrome-stats" class="mute"></span>
+        <button type="button" id="search-toggle">Search</button>
+        <a class="btn ghost" href="/mint" data-nav>Awaken</a>
+        <a class="btn ghost" href="/dashboard" data-nav>Holdings</a>
+        <button type="button" id="connect">Connect wallet</button>
       </div>
     </header>
-
-    <main class="layout">
-      <aside class="panel roster">
-        <div class="panel-head">
-          <h2>Agent Society</h2>
-          <span id="agent-count">0 living</span>
-        </div>
-        <div id="roster" class="roster-list"></div>
-      </aside>
-
-      <section class="stage">
-        <div class="map-wrap" id="map-wrap">
-          <div class="map-controls" aria-label="Map controls">
-            <button type="button" id="zoom-out" title="Zoom out">−</button>
-            <button type="button" id="zoom-fit" title="Fit entire world">Fit world</button>
-            <button type="button" id="zoom-in" title="Zoom in">+</button>
-          </div>
-          <div class="map-scene" id="map-scene">
-            <img class="map-art" id="map-art" src="/assets/world.jpg" alt="Map of Aetheria" />
-            <div id="regions" class="regions"></div>
-            <div id="tokens" class="tokens"></div>
-          </div>
-        </div>
-        <article class="dossier" id="dossier">
-          <p class="hint">Select an inhabitant. They are already living without you.</p>
-        </article>
-      </section>
-
-      <aside class="panel chronicle">
-        <div class="panel-head">
-          <h2>Live Chronicle</h2>
-          <span>never idle</span>
-        </div>
-        <ol id="feed" class="feed"></ol>
-        <form id="mint-form" class="mint">
-          <h3>Awaken an agent</h3>
-          <p>Mint a new inhabitant. AI writes their personality. You own the life that follows.</p>
-          <select name="role">
-            <option value="">Any vocation</option>
-            <option>Weaver</option>
-            <option>Forager</option>
-            <option>Trader</option>
-            <option>Chronicler</option>
-            <option>Guardian</option>
-            <option>Artificer</option>
-          </select>
-          <input name="guidance" maxlength="160" placeholder="High-level guidance (optional)" />
-          <button type="submit">Mint on the world</button>
-        </form>
-      </aside>
-    </main>
-    <script src="/app.js"></script>
+    <div id="search-panel" class="search-panel" hidden>
+      <input id="search-input" placeholder="Search inhabitants, relics, places, quests" />
+      <div id="search-results"></div>
+    </div>
+    <main id="app"></main>
+    <footer class="site-foot">
+      <div>
+        <b>Aetheria</b>
+        <p>A living agent society, an onchain game, and a creation layer — one world on X Layer.</p>
+      </div>
+      <nav>
+        <a href="/how-it-works" data-nav>How it works</a>
+        <a href="/ownership" data-nav>Ownership</a>
+        <a href="/economy" data-nav>Economy</a>
+        <a href="/status" data-nav>Status</a>
+        <a href="/settings" data-nav>Settings</a>
+        <a href="https://github.com/ezekiel6262/aetheria" target="_blank" rel="noreferrer">GitHub</a>
+      </nav>
+    </footer>
+    <nav class="mobile-tabs">
+      <a href="/world" data-nav>Map</a>
+      <a href="/agents" data-nav>Society</a>
+      <a href="/chronicle" data-nav>Chronicle</a>
+      <a href="/dashboard" data-nav>Me</a>
+    </nav>
+    <script type="module" src="/app.js"></script>
   </body>
 </html>

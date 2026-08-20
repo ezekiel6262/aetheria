@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyAction, createWorld, heuristicAction, mintAgent } from "./world.js";
+import { applyAction, buyRelic, createWorld, heuristicAction, listRelic, mintAgent } from "./world.js";
 
 test("seed world has living agents and relics", () => {
   const world = createWorld();
@@ -14,6 +14,16 @@ test("minting an agent increases population", () => {
   const { agent } = mintAgent(world, { name: "Test Walker", role: "Weaver" });
   assert.equal(world.agents.length, 7);
   assert.equal(agent.role, "Weaver");
+});
+
+test("relics can be listed and bought", () => {
+  const world = createWorld();
+  const relic = world.relics[0];
+  listRelic(world, relic.id, 9, relic.owner);
+  assert.equal(relic.listed.price, 9);
+  buyRelic(world, relic.id, "0xbuyer");
+  assert.equal(relic.owner, "0xbuyer");
+  assert.equal(relic.listed, null);
 });
 
 test("heuristic actions mutate region or inventory or reputation", () => {

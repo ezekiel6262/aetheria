@@ -6,12 +6,16 @@ import { explorerAddress, getChain, settleMintAgent } from "./chain.js";
 import { runTick, startRuntime } from "./runtime.js";
 import { REGIONS, ROLES } from "./seed.js";
 import {
+  buyRelic,
+  claimAll,
   claimRewards,
   getPublicState,
   guideAgent,
+  listRelic,
   loadWorld,
   mintAgent,
   saveWorld,
+  transferRelic,
 } from "./world.js";
 
 const app = express();
@@ -98,6 +102,30 @@ app.get("/api/stream", (req, res) => {
   req.on("close", () => clients.delete(res));
 });
 
+app.post("/api/agents/preview", async (req, res) => {
+  try {
+    const { role, guidance } = req.body ?? {};
+    const chosenRole = role && ROLES[role] ? role : "Weaver";
+    let invented = null;
+    try {
+      invented = await inventPersonality({ role: chosenRole, guidance });
+    } catch (error) {
+      console.warn("preview failed:", error.message);
+    }
+    res.json({
+      role: chosenRole,
+      name: invented?.name || `${chosenRole} unborn`,
+      personality: invented?.personality || `A ${chosenRole.toLowerCase()} not yet named. The world will finish them at mint.`,
+      goals: invented?.goals || ["Live", "Leave a name"],
+      skills: invented?.skills || [ROLES[chosenRole].skill],
+      opening: invented?.opening || guidance || "Live, play, create.",
+      ai: Boolean(invented),
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 app.post("/api/agents", async (req, res) => {
   try {
     const { owner, role, guidance, name } = req.body ?? {};
@@ -157,6 +185,82 @@ app.post("/api/agents/:id/claim", (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+app.post("/api/claim-all", (req, res) => {
+  try {
+    const result = claimAll(world, req.body?.owner);
+    saveWorld(world);
+    for (const event of result.events) {
+      broadcast({ type: "event", event, stats: getPublicState(world).stats });
+    }
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/relics/:id/transfer", (req, res) => {
+  try {
+    const result = transferRelic(world, req.params.id, req.body?.to, req.body?.from);
+    saveWorld(world);
+    broadcast({ type: "event", event: result.event, relic: result.relic, stats: getPublicState(world).stats });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/relics/:id/list", (req, res) => {
+  try {
+    const result = listRelic(world, req.params.id, req.body?.price, req.body?.owner);
+    saveWorld(world);
+    broadcast({ type: "event", event: result.event, relic: result.relic, stats: getPublicState(world).stats });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.post("/api/relics/:id/buy", (req, res) => {
+  try {
+    const result = buyRelic(world, req.params.id, req.body?.buyer);
+    saveWorld(world);
+    broadcast({ type: "event", event: result.event, relic: result.relic, stats: getPublicState(world).stats });
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+function serveIndex(_req, res) {
+  res.sendFile(path.join(publicDir, "index.html"), (error) => {
+    if (error) res.redirect("/index.html");
+  });
+}
+
+app.get(
+  [
+    "/world",
+    "/how-it-works",
+    "/ownership",
+    "/economy",
+    "/status",
+    "/agents",
+    "/places",
+    "/relics",
+    "/quests",
+    "/chronicle",
+    "/market",
+    "/rankings",
+    "/mint",
+    "/dashboard",
+    "/dashboard/claims",
+    "/settings",
+    "/connect",
+  ],
+  serveIndex,
+);
+app.get(/^\/(agents|places|relics|quests|guide)\/.*/, serveIndex);
 
 app.use((error, _req, res, _next) => {
   console.error(error);
