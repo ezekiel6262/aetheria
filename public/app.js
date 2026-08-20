@@ -2,6 +2,14 @@ const state = {
   world: null,
   selected: 1,
   account: null,
+  map: {
+    scale: 0.84,
+    x: 0,
+    y: 0,
+    min: 0.72,
+    max: 3.6,
+    ready: false,
+  },
 };
 
 const XLAYER = {
@@ -80,6 +88,7 @@ function regionName(id) {
 }
 
 function renderMap() {
+  if (!state.world) return;
   $("regions").innerHTML = state.world.regions
     .map((region) => `<div class="region" data-region="${region.id}" style="left:${region.x}%;top:${region.y}%">${region.name}</div>`)
     .join("");
@@ -93,12 +102,122 @@ function renderMap() {
     })
     .join("");
   for (const token of $("tokens").querySelectorAll(".token")) {
-    token.addEventListener("click", () => {
+    token.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.selected = Number(token.dataset.id);
       renderRoster();
       renderDossier();
     });
   }
+  layoutMap();
+}
+
+function layoutMap() {
+  const wrap = $("map-wrap");
+  const scene = $("map-scene");
+  const img = $("map-art");
+  if (!wrap || !scene || !img || !img.naturalWidth) return;
+  const pad = 28;
+  const availW = Math.max(120, wrap.clientWidth - pad * 2);
+  const availH = Math.max(120, wrap.clientHeight - pad * 2);
+  const ratio = img.naturalWidth / img.naturalHeight;
+  let width = availW;
+  let height = width / ratio;
+  if (height > availH) {
+    height = availH;
+    width = height * ratio;
+  }
+  scene.style.width = `${width}px`;
+  scene.style.height = `${height}px`;
+  const scale = state.map.scale;
+  const baseX = (wrap.clientWidth - width * scale) / 2;
+  const baseY = (wrap.clientHeight - height * scale) / 2;
+  clampMapPan(wrap, width, height);
+  scene.style.transform = `translate(${baseX + state.map.x}px, ${baseY + state.map.y}px) scale(${scale})`;
+  state.map.ready = true;
+}
+
+function clampMapPan(wrap, width, height) {
+  const scale = state.map.scale;
+  const extraX = Math.max(0, (width * scale - wrap.clientWidth) / 2 + 48);
+  const extraY = Math.max(0, (height * scale - wrap.clientHeight) / 2 + 48);
+  state.map.x = Math.min(extraX, Math.max(-extraX, state.map.x));
+  state.map.y = Math.min(extraY, Math.max(-extraY, state.map.y));
+}
+
+function setMapScale(next, origin) {
+  const wrap = $("map-wrap");
+  const scene = $("map-scene");
+  if (!wrap || !scene) return;
+  const prev = state.map.scale;
+  const scale = Math.min(state.map.max, Math.max(state.map.min, next));
+  if (origin && scene.offsetWidth) {
+    const rect = wrap.getBoundingClientRect();
+    const cx = origin.x - rect.left - wrap.clientWidth / 2;
+    const cy = origin.y - rect.top - wrap.clientHeight / 2;
+    const factor = scale / prev;
+    state.map.x = cx - (cx - state.map.x) * factor;
+    state.map.y = cy - (cy - state.map.y) * factor;
+  }
+  state.map.scale = scale;
+  if (scale <= 0.86) {
+    state.map.x = 0;
+    state.map.y = 0;
+  }
+  layoutMap();
+}
+
+function fitWorld() {
+  state.map.scale = 0.84;
+  state.map.x = 0;
+  state.map.y = 0;
+  layoutMap();
+}
+
+function initMapControls() {
+  const wrap = $("map-wrap");
+  const img = $("map-art");
+  if (!wrap || !img) return;
+  img.addEventListener("load", layoutMap);
+  if (img.complete) layoutMap();
+  window.addEventListener("resize", layoutMap);
+
+  $("zoom-in").addEventListener("click", () => setMapScale(state.map.scale * 1.22));
+  $("zoom-out").addEventListener("click", () => setMapScale(state.map.scale / 1.22));
+  $("zoom-fit").addEventListener("click", fitWorld);
+
+  wrap.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      const delta = event.deltaY > 0 ? 1 / 1.12 : 1.12;
+      setMapScale(state.map.scale * delta, { x: event.clientX, y: event.clientY });
+    },
+    { passive: false },
+  );
+
+  let dragging = false;
+  let last = { x: 0, y: 0 };
+  wrap.addEventListener("pointerdown", (event) => {
+    if (event.target.closest("button, .token")) return;
+    dragging = true;
+    last = { x: event.clientX, y: event.clientY };
+    wrap.classList.add("is-panning");
+    wrap.setPointerCapture(event.pointerId);
+  });
+  wrap.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    state.map.x += event.clientX - last.x;
+    state.map.y += event.clientY - last.y;
+    last = { x: event.clientX, y: event.clientY };
+    layoutMap();
+  });
+  const endPan = () => {
+    dragging = false;
+    wrap.classList.remove("is-panning");
+  };
+  wrap.addEventListener("pointerup", endPan);
+  wrap.addEventListener("pointercancel", endPan);
 }
 
 function renderFeed() {
@@ -257,5 +376,6 @@ source.onmessage = (message) => {
   } catch {}
 };
 
+initMapControls();
 loadWorld();
 setInterval(loadWorld, 12000);

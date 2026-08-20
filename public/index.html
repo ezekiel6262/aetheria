@@ -38,10 +38,17 @@
       </aside>
 
       <section class="stage">
-        <div class="map-wrap">
-          <img class="map-art" src="/assets/world.jpg" alt="Map of Aetheria" />
-          <div id="regions" class="regions"></div>
-          <div id="tokens" class="tokens"></div>
+        <div class="map-wrap" id="map-wrap">
+          <div class="map-controls" aria-label="Map controls">
+            <button type="button" id="zoom-out" title="Zoom out">−</button>
+            <button type="button" id="zoom-fit" title="Fit entire world">Fit world</button>
+            <button type="button" id="zoom-in" title="Zoom in">+</button>
+          </div>
+          <div class="map-scene" id="map-scene">
+            <img class="map-art" id="map-art" src="/assets/world.jpg" alt="Map of Aetheria" />
+            <div id="regions" class="regions"></div>
+            <div id="tokens" class="tokens"></div>
+          </div>
         </div>
         <article class="dossier" id="dossier">
           <p class="hint">Select an inhabitant. They are already living without you.</p>

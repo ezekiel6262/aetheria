@@ -88,3 +88,5 @@ Judging-aligned:
 - **Demo** is a world already in motion when the tab opens
 
 Copy for the Google Form, X post, and remaining-time checklist: [`docs/SUBMISSION.md`](docs/SUBMISSION.md).
+
+Full product brief for design (pages, features, objects, flows — no visual direction): [`docs/PRODUCT-BRIEF.md`](docs/PRODUCT-BRIEF.md).
