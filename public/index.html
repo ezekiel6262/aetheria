@@ -8,19 +8,12 @@
     <link rel="icon" href="/assets/logo.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="grain"></div>
     <header class="chrome">
-      <a class="brand" href="/" data-nav>
-        <img src="/assets/logo.jpg" alt="" />
-        <div>
-          <strong>Aetheria</strong>
-          <span id="chrome-live">living</span>
-        </div>
-      </a>
+      <a class="brand" href="/" data-nav>Aetheria</a>
       <nav class="chrome-nav">
         <a href="/world" data-nav>World</a>
         <a href="/agents" data-nav>Society</a>
@@ -32,13 +25,18 @@
         <a href="/rankings" data-nav>Rankings</a>
       </nav>
       <div class="chrome-actions">
-        <span id="chrome-stats" class="mute"></span>
-        <button type="button" id="search-toggle">Search</button>
-        <a class="btn ghost" href="/mint" data-nav>Awaken</a>
-        <a class="btn ghost" href="/dashboard" data-nav>Holdings</a>
+        <span id="world-pulse" class="pulse-pill">living</span>
+        <button type="button" id="search-toggle" class="ghost">Search</button>
+        <a class="btn ghost" href="/dashboard" data-nav>Dashboard</a>
+        <a class="btn accent" href="/mint" data-nav>Awaken</a>
         <button type="button" id="connect">Connect wallet</button>
       </div>
     </header>
+    <div id="network-banner" class="banner" hidden>
+      <strong>Wrong network.</strong>
+      <span>Aetheria settles on X Layer Testnet (1952). Switch to continue minting, guiding or claiming.</span>
+      <button type="button" id="fix-network" class="accent">Switch to X Layer</button>
+    </div>
     <div id="search-panel" class="search-panel" hidden>
       <input id="search-input" placeholder="Search inhabitants, relics, places, quests" />
       <div id="search-results"></div>
@@ -64,6 +62,14 @@
       <a href="/chronicle" data-nav>Chronicle</a>
       <a href="/dashboard" data-nav>Me</a>
     </nav>
+    <dialog id="claim-dialog">
+      <h2>Collect aether</h2>
+      <p id="claim-copy"></p>
+      <div class="cta-row">
+        <button type="button" id="claim-confirm" class="btn">Confirm claim</button>
+        <button type="button" id="claim-cancel" class="ghost">Cancel</button>
+      </div>
+    </dialog>
     <script type="module" src="/app.js"></script>
   </body>
 </html>

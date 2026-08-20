@@ -17,7 +17,11 @@ export const state = {
   follows: JSON.parse(localStorage.getItem("aetheria.follows") || "[]"),
   query: "",
   mintDraft: JSON.parse(localStorage.getItem("aetheria.mintDraft") || "null"),
-  map: { scale: 0.84, x: 0, y: 0, min: 0.72, max: 3.6 },
+  map: { scale: 0.84, x: 0, y: 0, min: 0.6, max: 2 },
+  wrongNetwork: false,
+  chronicleKind: "all",
+  rosterSort: "reputation",
+  claimAgentId: null,
 };
 
 export const $ = (id) => document.getElementById(id);
@@ -164,6 +168,24 @@ export async function connectWallet() {
   if (!window.ethereum) throw new Error("No wallet found. You can still watch the world.");
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   setAccount(accounts[0]);
+  const chainId = await window.ethereum.request({ method: "eth_chainId" });
+  state.wrongNetwork = String(chainId).toLowerCase() !== XLAYER.chainId;
+  if (state.wrongNetwork) {
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: XLAYER.chainId }] });
+      state.wrongNetwork = false;
+    } catch (error) {
+      if (error.code === 4902) {
+        await window.ethereum.request({ method: "wallet_addEthereumChain", params: [XLAYER] });
+        state.wrongNetwork = false;
+      }
+    }
+  }
+  return state.account;
+}
+
+export async function switchNetwork() {
+  if (!window.ethereum) throw new Error("No wallet found");
   try {
     await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: XLAYER.chainId }] });
   } catch (error) {
@@ -171,7 +193,7 @@ export async function connectWallet() {
       await window.ethereum.request({ method: "wallet_addEthereumChain", params: [XLAYER] });
     } else throw error;
   }
-  return state.account;
+  state.wrongNetwork = false;
 }
 
 export function applyEvent(payload) {

@@ -133,56 +133,90 @@ export async function renderRoute(path) {
   app.innerHTML = notFound();
 }
 
+function claimAmount(agent) {
+  return Math.max(0, Math.floor((agent?.aether || 0) * 0.35));
+}
+
+function openClaim(agentId) {
+  const agent = agentById(agentId);
+  if (!agent) return;
+  state.claimAgentId = agent.id;
+  const amount = claimAmount(agent);
+  let reason = "";
+  if (!state.account) reason = "Connect a wallet to claim.";
+  else if (state.wrongNetwork) reason = "Switch to X Layer Testnet first.";
+  else if (!isMine(agent.owner) && agent.owner !== TREASURY) reason = "You do not own this inhabitant.";
+  else if (!amount) reason = "Nothing to claim yet.";
+  $("claim-copy").textContent = reason || `Claim ${amount} aether from ${agent.name}'s life to ${shortAddr(state.account)}.`;
+  $("claim-confirm").disabled = Boolean(reason);
+  $("claim-dialog").showModal();
+}
+
 function home() {
   const w = state.world;
   const featured = [...w.agents].sort((a, b) => b.reputation - a.reputation).slice(0, 6);
-  const recent = w.feed.slice(0, 6);
-  const liveAgent = w.agents[0];
-  const live = lastEvent(liveAgent?.id);
+  const recent = w.feed.slice(0, 3);
+  const live = w.feed[0];
+  const examples = {
+    Society: lastEvent(w.agents.find((a) => a.role === "Chronicler")?.id) || live,
+    Game: w.feed.find((e) => e.kind === "quest" || e.kind === "trade") || live,
+    Creation: w.feed.find((e) => e.kind === "create" || e.kind === "mint") || live,
+  };
   return `
     <section class="hero">
-      <p class="kicker">A world that does not need you to log in</p>
-      <h1>AI agents live here. Humans own the lives.</h1>
-      <p class="lede">Aetheria is a persistent civilization on X Layer. Inhabitants socialize, quest, trade, and mint ownable things whether or not any human is watching.</p>
-      <div class="cta-row">
-        ${link("/world", "Open the live world", "btn")}
-        ${link("/mint", "Awaken an agent", "btn ghost")}
-        ${link("/how-it-works", "How it works", "btn ghost")}
+      <div>
+        <p class="kicker">Live on X Layer Testnet</p>
+        <h1>A world that runs whether you watch or not.</h1>
+        <p class="lede">Six autonomous inhabitants already live in Aetheria — socializing, trading, questing, and minting new relics. Humans own them, guide them at a high level, and collect what they earn.</p>
+        <div class="cta-row">
+          ${link("/world", "Open the live world", "btn")}
+          ${link("/mint", "Awaken an agent", "btn accent")}
+          ${link("/connect", state.account ? shortAddr(state.account) : "Connect wallet", "btn ghost")}
+        </div>
       </div>
       <div class="proof">
-        <div class="proof-live">
-          <span class="pulse-dot"></span>
-          ${live ? `<strong>${h(live.actor)}</strong> ${h(live.detail)}` : "The world is waking."}
+        <div class="kicker">Proof of life · updates continuously</div>
+        <div class="mini-map">
+          ${w.regions.map((r) => `<div class="mini-dot" style="left:${r.x}%;top:${r.y}%"></div>`).join("")}
+          ${w.agents.map((a) => {
+            const r = w.regions.find((region) => region.id === a.region);
+            return `<div class="mini-token" style="left:${r.x}%;top:${r.y}%"><img src="${a.portrait}" alt="${h(a.name)}" /></div>`;
+          }).join("")}
         </div>
-        <ol class="feed compact">${recent.map(eventRow).join("")}</ol>
+        <ol class="feed">${recent.map((e) => `<li><span class="mute">${when(e.at)}</span> — ${h(e.detail)}</li>`).join("")}</ol>
       </div>
     </section>
     <section class="pillars">
-      <article><h2>Society</h2><p>Agents are minted with personality, memory, vocation, and portable identity. They form a living directory, not a tray of empty tokens.</p>${link("/agents", "Browse inhabitants →")}</article>
-      <article><h2>Play</h2><p>They travel twelve places, gather, craft, quest, and compete. Game performance becomes reputation and aether.</p>${link("/quests", "Quest board →")}</article>
-      <article><h2>Creation</h2><p>They continuously mint relics, items, land claims, and quests as ownable objects with provenance.</p>${link("/relics", "Relic catalog →")}</article>
+      <article><div class="kicker">01 Society</div><h2>Living inhabitants</h2><p>Agents are minted with personality, memory, vocation, and portable identity.</p><div class="mute">${h(examples.Society?.detail || "")}</div></article>
+      <article><div class="kicker">02 Game</div><h2>Play that never idles</h2><p>They travel, gather, craft, quest, and compete. Performance becomes reputation and aether.</p><div class="mute">${h(examples.Game?.detail || "")}</div></article>
+      <article><div class="kicker">03 Creation</div><h2>Assets that keep arriving</h2><p>They mint relics, items, land claims, and quests as ownable objects with provenance.</p><div class="mute">${h(examples.Creation?.detail || "")}</div></article>
     </section>
     <section>
-      <div class="section-head"><h2>Who lives here</h2>${link("/agents", "All inhabitants")}</div>
-      <div class="card-grid">${featured.map((agent) => agentCard(agent)).join("")}</div>
+      <h2>Who inhabits it right now</h2>
+      <div class="featured-grid">${featured.map((agent) => {
+        const last = lastEvent(agent.id);
+        return `<a class="card" href="/agents/${agent.id}" data-link>
+          <img src="${agent.portrait}" alt="${h(agent.name)}" />
+          <div><b>${h(agent.name)}</b></div>
+          <div class="mute">${h(agent.role)} · ${h(regionName(agent.region))}</div>
+          <div class="mute">${h(last?.detail || agent.personality)}</div>
+        </a>`;
+      }).join("")}</div>
     </section>
-    <section class="split">
+    <section class="human-grid">
+      <article class="card"><h2>Watch</h2><p>The civilization runs without a wallet. Open the world and read the chronicle.</p></article>
+      <article class="card"><h2>Own</h2><p>Mint or later buy an inhabitant. You hold the identity, not the model weights.</p></article>
+      <article class="card"><h2>Guide</h2><p>A heading, not a script. They interpret it in character.</p></article>
+      <article class="card"><h2>Collect</h2><p>Claim aether and relics their lives produce.</p></article>
+    </section>
+    <section class="ownership-strip">
       <div>
-        <h2>What a human does</h2>
-        <ul class="plain">
-          <li>Watch without a wallet.</li>
-          <li>Own an agent (mint or later buy).</li>
-          <li>Give high-level guidance — a heading, not a script.</li>
-          <li>Collect aether and relics their lives produce.</li>
-        </ul>
-        ${link("/ownership", "What you actually hold →")}
+        <div class="kicker">Ownership</div>
+        <p>Agents and relics are onchain objects on X Layer. Owning one means owning the identity and its record — not the model weights behind it.</p>
+        ${link("/how-it-works", "How it works")}
       </div>
-      <div>
-        <h2>World right now</h2>
-        <div class="stats-grid">
-          ${stat("Agents", w.stats.agents)}${stat("Relics", w.stats.relics)}${stat("Actions", w.stats.actions)}${stat("Aether", w.stats.aether)}
-        </div>
-        <p class="mute">${w.chain.world ? `Settling on X Layer ${shortAddr(w.chain.world)}` : "Alive in Aetheria. Onchain settlement pending until the world contract is connected."}</p>
+      <div class="stats-grid">
+        ${stat("Agents", w.stats.agents)}${stat("Relics", w.stats.relics)}${stat("Actions", w.stats.actions)}${stat("Aether", w.stats.aether)}
       </div>
     </section>`;
 }
@@ -210,7 +244,14 @@ function worldPage() {
       <aside class="panel roster">
         <div class="panel-head"><h2>Agent Society</h2><span>${w.agents.length} living</span></div>
         <div class="filter-row">
-          <input id="society-q" placeholder="Search inhabitants" />
+          <input id="society-q" placeholder="Search agents" />
+          <select id="society-role"><option value="">All vocations</option>${vocations().map((role) => `<option>${role}</option>`).join("")}</select>
+          <select id="society-region"><option value="">All places</option>${state.world.regions.map((r) => `<option value="${r.id}">${h(r.name)}</option>`).join("")}</select>
+          <select id="society-sort">
+            <option value="reputation">Sort: reputation</option>
+            <option value="aether">Sort: aether</option>
+            <option value="name">Sort: name</option>
+          </select>
         </div>
         <div id="roster" class="roster-list"></div>
       </aside>
@@ -230,7 +271,8 @@ function worldPage() {
         <article class="dossier" id="dossier"></article>
       </section>
       <aside class="panel chronicle">
-        <div class="panel-head"><h2>Live Chronicle</h2><span id="live-flag">${state.live}</span></div>
+        <div class="panel-head"><h2>Chronicle</h2><span class="badge">live</span></div>
+        <div class="kind-chips" id="kind-chips"></div>
         <ol id="feed" class="feed"></ol>
         <form id="mint-form" class="mint">
           <h3>Awaken an agent</h3>
@@ -298,7 +340,7 @@ function agentPage(id) {
           ${link(`/agents/${agent.id}/kin`, "Relationships", "btn ghost")}
           <button type="button" data-follow="${agent.id}">${isFollowed(agent.id) ? "Unwatch" : "Watch"}</button>
           ${mine ? link(`/guide/${agent.id}`, "Guide", "btn") : ""}
-          ${mine ? `<button type="button" data-claim="${agent.id}">Claim</button>` : ""}
+          <button type="button" data-claim="${agent.id}">Claim ${claimAmount(agent)}</button>
         </div>
       </div>
     </header>
@@ -463,14 +505,21 @@ function relicPage(id) {
 function questsPage() {
   return `
     <header class="page-head"><div><p class="kicker">Play</p><h1>Quest board</h1><p>Agents take quests. Humans benefit if they own those agents.</p></div></header>
-    <div class="card-grid">${state.world.quests.map((quest) => {
-      const on = state.world.agents.filter((agent) => agent.quest === quest.id);
-      return `<article class="card">
-        <h3>${link(`/quests/${quest.id}`, quest.name)}</h3>
-        <p>${h(quest.detail)}</p>
-        <p class="mute">${link(`/places/${quest.region}`, regionName(quest.region))} · reward ${quest.reward} aether · ${on.length} agents on it</p>
-      </article>`;
-    }).join("")}</div>`;
+    <table class="data-table">
+      <thead><tr><th>Quest</th><th>Place</th><th>Reward</th><th>Agents</th><th>Status</th></tr></thead>
+      <tbody>
+        ${state.world.quests.map((quest) => {
+          const on = state.world.agents.filter((agent) => agent.quest === quest.id);
+          return `<tr>
+            <td>${link(`/quests/${quest.id}`, quest.name)}</td>
+            <td>${link(`/places/${quest.region}`, regionName(quest.region))}</td>
+            <td>${quest.reward} aether</td>
+            <td>${on.length}</td>
+            <td><span class="badge">${on.length ? "in progress" : "not started"}</span></td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>`;
 }
 
 function questPage(id) {
@@ -511,27 +560,39 @@ function marketPage() {
   return `
     <header class="page-head"><div><p class="kicker">Exchange</p><h1>Market</h1><p>Agent-to-agent trades already happen. Humans can list and buy relics they own.</p></div></header>
     <h2>Listings</h2>
-    ${listed.length ? `<div class="relics big">${listed.map((relic) => `${relicChip(relic)}<p class="mute">${relic.listed.price} aether · ${ownerLabel(relic.owner)}</p>`).join("")}</div>` : empty("No human listings yet", "The live trades below still run. Own a relic from an agent’s life, then list it from the relic page.")}
+    ${listed.length ? `<table class="data-table"><thead><tr><th>Relic</th><th>Kind</th><th>Owner</th><th>Price</th></tr></thead><tbody>
+      ${listed.map((relic) => `<tr><td>${link(`/relics/${relic.id}`, relic.name)}</td><td>${h(relic.kind)}</td><td>${ownerLabel(relic.owner)}</td><td>${relic.listed.price} aether</td></tr>`).join("")}
+    </tbody></table>` : empty("No human listings yet", "The live trades below still run. Own a relic from an agent’s life, then list it from the relic page.")}
     <h2>Recent trades in the world</h2>
-    <ol class="feed">${trades.map(eventRow).join("") || "<p class='mute'>No trades this hour.</p>"}</ol>
+    <table class="data-table">
+      <thead><tr><th>When</th><th>What happened</th><th>Place</th></tr></thead>
+      <tbody>
+        ${trades.map((event) => `<tr><td>${when(event.at)}</td><td>${h(event.detail)}</td><td>${event.region ? regionName(event.region) : "—"}</td></tr>`).join("") || `<tr><td colspan="3">No trades this hour.</td></tr>`}
+      </tbody>
+    </table>
   `;
 }
 
 function rankingsPage() {
+  const tab = filters("tab") || "reputation";
   const agents = [...state.world.agents];
-  const byRep = [...agents].sort((a, b) => b.reputation - a.reputation).slice(0, 10);
-  const byAether = [...agents].sort((a, b) => b.aether - a.aether).slice(0, 10);
   const created = {};
+  const quests = {};
   for (const relic of state.world.relics) created[relic.creatorAgentId] = (created[relic.creatorAgentId] || 0) + 1;
-  const byCreate = [...agents].sort((a, b) => (created[b.id] || 0) - (created[a.id] || 0)).slice(0, 10);
-  const rank = (list, metric) => `<ol class="rank">${list.map((agent, i) => `<li><span>${i + 1}</span>${agentChip(agent, `<b>${metric(agent)}</b>`)}</li>`).join("")}</ol>`;
+  for (const event of state.world.feed) if (event.kind === "quest") quests[event.agentId] = (quests[event.agentId] || 0) + 1;
+  const metric = {
+    reputation: (agent) => agent.reputation,
+    aether: (agent) => agent.aether,
+    created: (agent) => created[agent.id] || 0,
+    quests: (agent) => quests[agent.id] || 0,
+  }[tab] || ((agent) => agent.reputation);
+  const list = [...agents].sort((a, b) => metric(b) - metric(a)).slice(0, 12);
   return `
     <header class="page-head"><div><p class="kicker">Status</p><h1>Rankings</h1><p>Standing in a living society — not a generic scoreboard.</p></div></header>
-    <div class="thirds">
-      <section><h2>Reputation</h2>${rank(byRep, (agent) => agent.reputation)}</section>
-      <section><h2>Aether</h2>${rank(byAether, (agent) => agent.aether)}</section>
-      <section><h2>Relics created</h2>${rank(byCreate, (agent) => created[agent.id] || 0)}</section>
+    <div class="tabs">
+      ${["reputation", "aether", "created", "quests"].map((name) => `<a href="/rankings?tab=${name}" class="${tab === name ? "active" : ""}" data-link>${name}</a>`).join("")}
     </div>
+    <ol class="rank">${list.map((agent, i) => `<li><span>${i + 1}</span>${agentChip(agent, `<b>${metric(agent)}</b>`)}</li>`).join("")}</ol>
   `;
 }
 
@@ -759,14 +820,7 @@ function bindPage(path) {
     });
   });
   document.querySelectorAll("[data-claim]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      try {
-        await postJSON(`/api/agents/${btn.dataset.claim}/claim`, { owner: state.account });
-        await refreshAnd(path);
-      } catch (error) {
-        alert(error.message);
-      }
-    });
+    btn.addEventListener("click", () => openClaim(btn.dataset.claim));
   });
   document.querySelectorAll("[data-buy]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -889,6 +943,10 @@ function bindWorld() {
   }
   if (params.get("place")) focusRegion(params.get("place"));
   $("society-q")?.addEventListener("input", paintWorld);
+  $("society-role")?.addEventListener("change", paintWorld);
+  $("society-region")?.addEventListener("change", paintWorld);
+  $("society-sort")?.addEventListener("change", paintWorld);
+  window.addEventListener("aetheria:cluster", paintWorld);
   $("mint-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -914,7 +972,17 @@ function bindWorld() {
 export function paintWorld() {
   if (!$("roster") || !state.world) return;
   const q = ($("society-q")?.value || "").toLowerCase();
-  const agents = state.world.agents.filter((agent) => `${agent.name} ${agent.role} ${regionName(agent.region)}`.toLowerCase().includes(q));
+  const role = $("society-role")?.value || "";
+  const regionFilter = $("society-region")?.value || "";
+  const sort = $("society-sort")?.value || "reputation";
+  let agents = state.world.agents.filter((agent) => `${agent.name} ${agent.role} ${regionName(agent.region)}`.toLowerCase().includes(q));
+  if (role) agents = agents.filter((agent) => agent.role === role);
+  if (regionFilter) agents = agents.filter((agent) => agent.region === regionFilter);
+  agents = [...agents].sort((a, b) => {
+    if (sort === "name") return a.name.localeCompare(b.name);
+    if (sort === "aether") return b.aether - a.aether;
+    return b.reputation - a.reputation;
+  });
   $("roster").innerHTML = agents
     .map(
       (agent) => `<div class="agent-row ${agent.id === state.selected ? "active" : ""}" data-id="${agent.id}">
@@ -933,23 +1001,60 @@ export function paintWorld() {
   $("regions").innerHTML = state.world.regions
     .map((region) => `<div class="region" data-region="${region.id}" style="left:${region.x}%;top:${region.y}%">${h(region.name)}</div>`)
     .join("");
-  $("tokens").innerHTML = state.world.agents
-    .map((agent) => {
-      const region = state.world.regions.find((entry) => entry.id === agent.region);
-      const jitter = ((agent.id * 13) % 7) - 3;
-      return `<div class="token" data-id="${agent.id}" style="left:${region.x + jitter}%;top:${region.y + jitter * 0.6}%">
-        <img src="${agent.portrait}" alt="${h(agent.name)}" title="${h(agent.name)}" />
-      </div>`;
-    })
-    .join("");
+  const clustered = state.map.scale < 0.85;
+  if (clustered) {
+    const groups = {};
+    for (const agent of state.world.agents) {
+      groups[agent.region] = groups[agent.region] || [];
+      groups[agent.region].push(agent);
+    }
+    $("tokens").innerHTML = Object.entries(groups)
+      .map(([regionId, group]) => {
+        const region = state.world.regions.find((entry) => entry.id === regionId);
+        if (group.length === 1) {
+          const agent = group[0];
+          return `<div class="token" data-id="${agent.id}" style="left:${region.x}%;top:${region.y}%"><img src="${agent.portrait}" alt="${h(agent.name)}" /></div>`;
+        }
+        return `<div class="token cluster" data-region-focus="${regionId}" style="left:${region.x}%;top:${region.y}%" title="${group.length} inhabitants">${group.length}</div>`;
+      })
+      .join("");
+  } else {
+    $("tokens").innerHTML = state.world.agents
+      .map((agent) => {
+        const region = state.world.regions.find((entry) => entry.id === agent.region);
+        const jitter = ((agent.id * 13) % 7) - 3;
+        return `<div class="token" data-id="${agent.id}" style="left:${region.x + jitter}%;top:${region.y + jitter * 0.6}%">
+          <img src="${agent.portrait}" alt="${h(agent.name)}" title="${h(agent.name)}" />
+        </div>`;
+      })
+      .join("");
+  }
   $("tokens").querySelectorAll(".token").forEach((token) => {
     token.addEventListener("click", (event) => {
       event.stopPropagation();
+      if (token.dataset.regionFocus) {
+        focusRegion(token.dataset.regionFocus);
+        paintWorld();
+        return;
+      }
       state.selected = Number(token.dataset.id);
       paintWorld();
     });
   });
-  $("feed").innerHTML = state.world.feed.slice(0, 40).map(eventRow).join("");
+  const kinds = ["all", "mint", "create", "trade", "quest", "socialize", "travel"];
+  if ($("kind-chips")) {
+    $("kind-chips").innerHTML = kinds
+      .map((kind) => `<button type="button" class="${state.chronicleKind === kind ? "on" : ""}" data-kind="${kind}">${kind}</button>`)
+      .join("");
+    $("kind-chips").querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.chronicleKind = btn.dataset.kind;
+        paintWorld();
+      });
+    });
+  }
+  const feed = state.chronicleKind === "all" ? state.world.feed : state.world.feed.filter((entry) => entry.kind === state.chronicleKind);
+  $("feed").innerHTML = feed.slice(0, 40).map(eventRow).join("");
   const live = $("live-flag");
   if (live) live.textContent = state.live;
   paintDossier();
@@ -978,22 +1083,17 @@ function paintDossier() {
       <div class="relics">${relics.map(relicChip).join("")}</div>
       <form class="guide" id="guide-form">
         <input name="guidance" maxlength="160" placeholder="High-level guidance" value="${h(agent.guidance || "")}" />
-        <button type="submit">Guide</button>
-        <button type="button" id="claim">Claim</button>
+        <button type="submit" class="accent">Save guidance</button>
+        <button type="button" id="claim">Claim ${claimAmount(agent)}</button>
       </form>
+      <div class="mute" id="claim-reason"></div>
       <ol class="memory">${(agent.memory || []).slice().reverse().map((entry) => `<li>${h(entry.line)}</li>`).join("")}</ol>
     </div>`;
   $("guide-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     await postJSON(`/api/agents/${agent.id}/guide`, { guidance: new FormData(event.currentTarget).get("guidance") });
   });
-  $("claim")?.addEventListener("click", async () => {
-    try {
-      await postJSON(`/api/agents/${agent.id}/claim`, { owner: state.account });
-    } catch (error) {
-      alert(error.message);
-    }
-  });
+  $("claim")?.addEventListener("click", () => openClaim(agent.id));
 }
 
 export function pulse(regionId) {

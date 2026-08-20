@@ -1,4 +1,4 @@
-import { $, connectWallet, go, loadWorld, shortAddr, startLive, state } from "./js/core.js";
+import { $, connectWallet, go, loadWorld, shortAddr, startLive, state, switchNetwork } from "./js/core.js";
 import { paintWorld, pulse, renderRoute, searchHtml } from "./js/pages.js";
 
 function path() {
@@ -14,12 +14,14 @@ function setActiveNav() {
   });
   const connect = $("connect");
   if (connect) connect.textContent = state.account ? shortAddr(state.account) : "Connect wallet";
-  const live = $("chrome-live");
-  if (live) live.textContent = state.live === "live" ? "living" : state.live === "polling" ? "polling" : "…";
-  const stats = $("chrome-stats");
-  if (stats && state.world) {
-    stats.textContent = `${state.world.stats.agents} living · ${state.world.stats.relics} relics`;
+  const pulseEl = $("world-pulse");
+  if (pulseEl && state.world) {
+    const settled = state.world.agents.filter((agent) => agent.txHash || agent.onchainId).length;
+    const chain = state.world.chain?.world ? "X Layer" : "local";
+    pulseEl.textContent = `${state.world.stats.agents} living · ${settled} settled · ${chain}`;
   }
+  const banner = $("network-banner");
+  if (banner) banner.hidden = !state.wrongNetwork;
 }
 
 async function render() {
@@ -51,6 +53,14 @@ function bindChrome() {
       go("/connect");
     }
   });
+  $("fix-network")?.addEventListener("click", async () => {
+    try {
+      await switchNetwork();
+      setActiveNav();
+    } catch (error) {
+      alert(error.message);
+    }
+  });
   $("search-toggle")?.addEventListener("click", () => {
     const panel = $("search-panel");
     panel.hidden = !panel.hidden;
@@ -58,6 +68,20 @@ function bindChrome() {
   });
   $("search-input")?.addEventListener("input", (event) => {
     $("search-results").innerHTML = searchHtml(event.target.value);
+  });
+  $("claim-cancel")?.addEventListener("click", () => $("claim-dialog").close());
+  $("claim-confirm")?.addEventListener("click", async () => {
+    const id = state.claimAgentId;
+    $("claim-dialog").close();
+    if (!id) return;
+    const { postJSON, loadWorld } = await import("./js/core.js");
+    try {
+      await postJSON(`/api/agents/${id}/claim`, { owner: state.account });
+      await loadWorld();
+      await render();
+    } catch (error) {
+      alert(error.message);
+    }
   });
   window.addEventListener("popstate", render);
   window.addEventListener("aetheria:account", () => {

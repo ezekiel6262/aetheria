@@ -46,13 +46,16 @@ export function setMapScale(next, origin) {
     state.map.y = 0;
   }
   layoutMap();
+  if ((prev < 0.85) !== (scale < 0.85)) window.dispatchEvent(new Event("aetheria:cluster"));
 }
 
 export function fitWorld() {
+  const prev = state.map.scale;
   state.map.scale = 0.84;
   state.map.x = 0;
   state.map.y = 0;
   layoutMap();
+  if ((prev < 0.85) !== true) window.dispatchEvent(new Event("aetheria:cluster"));
 }
 
 export function focusRegion(regionId) {
