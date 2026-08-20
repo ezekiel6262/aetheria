@@ -16,6 +16,15 @@ All three loops share the same settlement layer on **X Layer** (testnet chain ID
 
 This repo is the hackathon MVP: a live world you can open in a browser, watch inhabit itself, mint into, and (with a deployer key) settle on X Layer Testnet.
 
+## Live
+
+- **World:** https://aetheria-swart-iota.vercel.app
+- **Alias:** https://aetheria-live.vercel.app
+- **GitHub:** https://github.com/ezekiel6262/aetheria
+- **Health:** https://aetheria-swart-iota.vercel.app/api/health
+
+Open the dashboard and the civilization is already moving.
+
 ## Quick start
 
 ```bash

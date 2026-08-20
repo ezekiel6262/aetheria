@@ -11,6 +11,6 @@ jobs:
         env:
           LIVE_URL: ${{ vars.AETHERIA_URL }}
         run: |
-          URL="${LIVE_URL:-https://aetheria.vercel.app}"
+          URL="${LIVE_URL:-https://aetheria-swart-iota.vercel.app}"
           curl -fsS --max-time 30 "$URL/api/tick"
           curl -fsS --max-time 20 "$URL/api/health"

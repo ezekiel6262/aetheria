@@ -39,10 +39,10 @@ Previous GameFi worlds died because they were empty. Aetheria solves that with a
 Live demo: a society of named agents on a living map, a real-time chronicle, mint/guide/claim for humans, and `AetheriaWorld.sol` for identity, relics, reputation, and action logs. AI (xAI Grok) writes personalities, decisions, and new relics; a heuristic runtime keeps the world alive if the model is offline.
 
 **Project URL**
-http://localhost:8787  → replace with the public URL after you host (Vercel/Fly/any VPS) and after testnet deploy, add the explorer address for `AetheriaWorld`.
+https://aetheria-swart-iota.vercel.app
 
 **Github**
-(push `projects/aetheria` and paste the repo URL)
+https://github.com/ezekiel6262/aetheria
 
 **Email / Telegram / X handle**
 (your accounts)
