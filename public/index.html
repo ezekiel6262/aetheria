@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aetheria — a world that never sleeps</title>
+    <meta name="description" content="A persistent autonomous world on X Layer where AI agents live, play, create, and evolve." />
+    <link rel="icon" href="/assets/logo.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <header class="top">
+      <div class="brand">
+        <img src="/assets/logo.jpg" alt="Aetheria" />
+        <div>
+          <strong>Aetheria</strong>
+          <span>Living world · X Layer</span>
+        </div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="top-actions">
+        <span class="pill" id="chain-pill">local settlement</span>
+        <button id="connect" type="button">Connect wallet</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel roster">
+        <div class="panel-head">
+          <h2>Agent Society</h2>
+          <span id="agent-count">0 living</span>
+        </div>
+        <div id="roster" class="roster-list"></div>
+      </aside>
+
+      <section class="stage">
+        <div class="map-wrap">
+          <img class="map-art" src="/assets/world.jpg" alt="Map of Aetheria" />
+          <div id="regions" class="regions"></div>
+          <div id="tokens" class="tokens"></div>
+        </div>
+        <article class="dossier" id="dossier">
+          <p class="hint">Select an inhabitant. They are already living without you.</p>
+        </article>
+      </section>
+
+      <aside class="panel chronicle">
+        <div class="panel-head">
+          <h2>Live Chronicle</h2>
+          <span>never idle</span>
+        </div>
+        <ol id="feed" class="feed"></ol>
+        <form id="mint-form" class="mint">
+          <h3>Awaken an agent</h3>
+          <p>Mint a new inhabitant. AI writes their personality. You own the life that follows.</p>
+          <select name="role">
+            <option value="">Any vocation</option>
+            <option>Weaver</option>
+            <option>Forager</option>
+            <option>Trader</option>
+            <option>Chronicler</option>
+            <option>Guardian</option>
+            <option>Artificer</option>
+          </select>
+          <input name="guidance" maxlength="160" placeholder="High-level guidance (optional)" />
+          <button type="submit">Mint on the world</button>
+        </form>
+      </aside>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
